@@ -6,16 +6,6 @@ Review and score skills for quality, correctness, and effectiveness. Combines au
 
 Evaluates any skill against a standardized quality rubric. Produces a scored report with concrete fixes, ordered by impact. Catches mechanical issues (dead code, unused imports, frontmatter validation) and assesses subjective dimensions (triggering quality, conciseness, writing style).
 
-## Installation
-
-Install via the agent marketplace CLI:
-
-```bash
-marketplace install skill-reviewer
-```
-
-Or manually clone and copy the `skills/` folder into your agent's config directory.
-
 ## Usage
 
 1. Run the static analysis script against a skill directory:
