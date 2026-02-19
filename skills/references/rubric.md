@@ -3,6 +3,31 @@
 Use this rubric to evaluate skills across eight dimensions. Each dimension is scored
 1-10. The overall score is the average, weighted by the category weights below.
 
+Before scoring, verify spec compliance. A skill that fails the prerequisite gate
+has structural defects that must be fixed before quality scoring is meaningful.
+
+## Spec Compliance (prerequisite gate)
+
+These are pass/fail checks from the Agent Skills specification. Any failure here
+should be reported as a **must fix** item before proceeding with scoring. If the
+skill fails multiple spec checks, note the score as provisional.
+
+| Check | Rule | Severity |
+|-------|------|----------|
+| Name format | 1-64 chars, lowercase alphanumeric + hyphens only, no leading/trailing/consecutive hyphens | error |
+| Name-directory match | `name` field must match parent directory name exactly | error |
+| Description present | Non-empty, max 1024 characters | error |
+| Frontmatter well-formed | Starts and ends with `---`, contains valid YAML | error |
+| Compatibility length | If present, max 500 characters | error |
+| Body token budget | SKILL.md body should be under ~5000 tokens (roughly word count x 1.3) | warning |
+| Line count | SKILL.md should be under 500 lines; move detail to `references/` | warning |
+| File references valid | All relative paths in SKILL.md must resolve to existing files | error |
+| Directory structure | Only `SKILL.md`, `scripts/`, `references/`, `assets/`, `agents/` at root | warning |
+
+Run `scripts/analyze.py` to check these automatically. Optionally also run
+`skills-ref validate` (from the [reference library](https://github.com/agentskills/agentskills/tree/main/skills-ref))
+for additional validation.
+
 ## Scoring Dimensions
 
 ### 1. Triggering & Description (weight: 1.5x)
@@ -25,6 +50,7 @@ internals are.
 - Does it address undertriggering (the "even if you think you can..." pattern)?
 - Are scope boundaries clear (what's in vs. out)?
 - Is the description 50-120 words (the sweet spot for always-in-context metadata)?
+- Is the description under the spec hard limit of 1024 characters?
 
 ### 2. Conciseness (weight: 1.0x)
 
@@ -66,13 +92,13 @@ Models with good theory of mind respond better to reasoning than rigid commands.
 
 ### 4. Progressive Disclosure (weight: 1.0x)
 
-The three-level loading system: metadata (always in context) → SKILL.md body
-(on trigger) → bundled resources (on demand). Well-structured skills minimize
-what's loaded at each level.
+The three-level loading system: metadata (~100 tokens, always in context) →
+SKILL.md body (<5000 tokens recommended, loaded on trigger) → bundled resources
+(loaded on demand). Well-structured skills minimize what's loaded at each level.
 
 | Score | Criteria |
 |-------|----------|
-| 9-10 | Clean level separation. SKILL.md body is self-sufficient for common cases. References used for deep dives. Scripts execute without being loaded. |
+| 9-10 | Clean level separation. SKILL.md body is self-sufficient for common cases. References used for deep dives. Scripts execute without being loaded. Body under 5000 tokens. |
 | 7-8 | Good separation. Maybe one reference that could be inlined or vice versa. |
 | 5-6 | Everything in SKILL.md — workable but not optimal for large skills. |
 | 3-4 | Information in wrong levels (deep detail in description, overview in references). |
@@ -81,7 +107,9 @@ what's loaded at each level.
 **What to check:**
 - Is the description self-contained for triggering decisions?
 - Does SKILL.md handle the 80% case without needing references?
+- Is the SKILL.md body under the spec-recommended 5000 token budget?
 - Are references clearly signposted (when to read, what you'll find)?
+- Are individual reference files focused and concise (not dumping entire docs)?
 - Are scripts self-contained executables (not requiring the model to read them)?
 - Are reusable files organized under `scripts/`, `references/`, and `assets/`
   instead of being left at the skill root?
@@ -90,6 +118,8 @@ what's loaded at each level.
 
 If the skill bundles scripts, they need to work correctly. Bugs in scripts
 directly undermine the skill's value and the model's trust in its outputs.
+This applies to all script types — Python, shell, JavaScript, TypeScript, Ruby,
+not just Python.
 
 | Score | Criteria |
 |-------|----------|
@@ -105,6 +135,8 @@ directly undermine the skill's value and the model's trust in its outputs.
 - Do all documented features actually work? (Cross-reference SKILL.md claims vs. script behavior)
 - Error handling — does it return useful messages or crash?
 - Output format — structured (JSON) or unstructured (raw text)?
+- Shell scripts: shebang line present? `set -euo pipefail` for robustness?
+- All script languages in `scripts/` reviewed, not just Python.
 
 ### 6. Separation of Concerns (weight: 1.0x)
 
@@ -187,12 +219,13 @@ scripts that produce wrong results.
 
 Present the review as:
 
-1. **Static analysis results** — output from scripts/analyze.py
-2. **Dimension scores** — each dimension with score, evidence, and specific issues
-3. **Overall score** — weighted average
-4. **Fix list** — concrete, prioritized changes ordered by impact
+1. **Spec compliance** — pass/fail gate results (name, description, structure, references)
+2. **Static analysis results** — output from scripts/analyze.py
+3. **Dimension scores** — each dimension with score, evidence, and specific issues
+4. **Overall score** — weighted average (provisional if spec gate has failures)
+5. **Fix list** — concrete, prioritized changes ordered by impact
 
 Organize fixes into:
-- **Must fix** — bugs, broken features, misleading documentation
+- **Must fix** — spec violations, bugs, broken features, misleading documentation
 - **Should fix** — dead code, missing edge cases, documentation gaps
 - **Nice to have** — style improvements, additional coverage

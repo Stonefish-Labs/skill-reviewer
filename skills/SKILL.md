@@ -30,10 +30,14 @@ python3 <skill-path>/scripts/analyze.py /path/to/skill --format text
 
 Use `--format json` if you need structured output for further processing.
 
-This catches mechanical issues automatically: missing frontmatter, dead imports,
-unused variables, third-party dependencies, structural problems, misplaced top-level
-files/directories, and line counts.
+This catches mechanical issues automatically: spec compliance (name format, name-directory
+match, description char limit, optional field validation), broken file references, token
+estimation, dead imports, unused variables, third-party dependencies, structural problems,
+misplaced top-level files/directories, line counts, and shell script structure.
 Start here because these findings are objective — they're either present or not.
+
+If `skills-ref` is available, also run `skills-ref validate /path/to/skill` for additional
+spec validation from the [official reference library](https://github.com/agentskills/agentskills/tree/main/skills-ref).
 
 ### Step 2: Read the Rubric
 
@@ -58,19 +62,33 @@ failure modes — skills that don't fire, and scripts that produce wrong results
 
 With the rubric in mind, investigate the skill:
 
-1. **Read SKILL.md** — evaluate description, body structure, style
-2. **Read each bundled script** — look for bugs, dead code, edge cases
-3. **Cross-reference claims vs. behavior** — if SKILL.md says "supports X", verify
+1. **Verify spec compliance** — confirm `name` matches parent directory, is
+   lowercase alphanumeric + hyphens (1-64 chars, no leading/trailing/consecutive
+   hyphens). Confirm description is under 1024 characters. Check optional fields
+   (`license`, `compatibility` ≤500 chars, `metadata`, `allowed-tools`) for
+   correctness when present.
+2. **Read SKILL.md** — evaluate description, body structure, style. Estimate
+   token cost of the body (target under 5000 tokens, roughly word count x 1.3).
+3. **Read each bundled script** — all languages, not just Python. Look for bugs,
+   dead code, edge cases. Check shell scripts for shebang and error handling.
+4. **Cross-reference claims vs. behavior** — if SKILL.md says "supports X", verify
    the script actually handles X. This is where the most damaging bugs hide.
-4. **Test edge cases** — run scripts with tricky inputs, boundary conditions,
+5. **Verify file references** — every relative path in SKILL.md should resolve to
+   an existing file. Check that reference chains stay one level deep (the spec
+   warns against deeply nested reference chains).
+6. **Test edge cases** — run scripts with tricky inputs, boundary conditions,
    unusual phrasings. Think about what a real user would actually type.
-5. **Check what's missing** — are there limitations that aren't documented?
+7. **Check what's missing** — are there limitations that aren't documented?
    Patterns that should work but don't?
-6. **Check folder conventions** — if reusable resources are at the skill root,
+8. **Check folder conventions** — if reusable resources are at the skill root,
    propose creating `scripts/`, `references/`, and/or `assets/` (as needed) and
    moving files into those folders.
 
 ### Step 4: Score and Report
+
+First, check the spec compliance gate from the rubric. If the skill fails any
+spec compliance checks (name format, description limit, broken file references),
+report those failures first and note the score as provisional until they're fixed.
 
 Score each dimension, then compute the weighted overall:
 
@@ -81,11 +99,12 @@ overall = (triggering×1.5 + conciseness×1.0 + why×1.0 + disclosure×1.0
 
 Present the report with this structure:
 
-1. **Static analysis** — output from analyze.py
-2. **Dimension scores** — score, evidence, specific issues per dimension
-3. **Overall score** — weighted average out of 10
-4. **Fix list** organized by priority:
-   - **Must fix**: bugs, broken features, misleading docs
+1. **Spec compliance** — pass/fail gate results (name, description, structure, references)
+2. **Static analysis** — output from analyze.py
+3. **Dimension scores** — score, evidence, specific issues per dimension
+4. **Overall score** — weighted average out of 10
+5. **Fix list** organized by priority:
+   - **Must fix**: spec violations, bugs, broken features, misleading docs
    - **Should fix**: dead code, documentation gaps, missing edge cases, and
      structure cleanup (create `scripts/` / `references/` / `assets/` when
      needed and move misplaced files)
